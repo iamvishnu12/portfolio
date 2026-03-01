@@ -1,534 +1,860 @@
-import React, { useState, useEffect } from 'react';
-import { Mail, Phone, MapPin, Github, Linkedin, ExternalLink, Code, Database, Globe, Server, Award, Calendar, GraduationCap, Briefcase, User, ChevronDown, Menu, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from "react";
+import { Mail, Phone, Linkedin, Github, X, ArrowUpRight, Award, Sparkles, MessageCircle } from "lucide-react";
 
-function App() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('home');
+/* ─── Intersection Observer Reveal ─── */
+const useInView = (threshold = 0.1) => {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, inView];
+};
+
+const Reveal = ({ children, delay = 0, style = {} }) => {
+  const [ref, inView] = useInView();
+  return (
+    <div ref={ref} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? "translateY(0px)" : "translateY(28px)",
+      transition: `opacity 0.75s ease ${delay}s, transform 0.75s ease ${delay}s`,
+      ...style
+    }}>{children}</div>
+  );
+};
+
+/* ─── DESIGN TOKENS ─── */
+const G = {
+  gold:    "#c9a84c",
+  goldDim: "rgba(201,168,76,0.18)",
+  goldBdr: "rgba(201,168,76,0.22)",
+  bg:      "#07070e",
+  bgCard:  "rgba(255,255,255,0.025)",
+  bgHov:   "rgba(201,168,76,0.045)",
+  bgAlt:   "rgba(201,168,76,0.018)",
+  text:    "#ece4d2",
+  muted:   "#6e6554",
+  soft:    "#b8aa90",
+  display: "'Playfair Display', Georgia, serif",
+  body:    "'Cormorant Garamond', Georgia, serif",
+};
+
+/* ─── RESUME DATA ─── */
+const skillGroups = [
+  { label: "Languages",            items: ["Java", "JavaScript"] },
+  { label: "Frameworks & Libraries", items: ["Spring Boot (MVC)", "Spring Boot (Microservices)", "Spring Data JPA", "Hibernate", "Spring Security (JWT)", "React.js", "Apache Kafka"] },
+  { label: "Databases",            items: ["MySQL", "MongoDB"] },
+  { label: "Cloud & DevOps",       items: ["AWS EC2", "AWS RDS", "Docker"] },
+  { label: "Tools",                items: ["Git", "Maven", "Swagger", "Postman", "Jira"] },
+  { label: "Core Concepts",        items: ["Data Structures & Algorithms", "Object-Oriented Programming (OOPs)", "DBMS"] },
+  { label: "Development Skills",   items: ["REST API Design", "Authentication & Authorization", "Database Optimization", "Microservices Architecture", "Debugging"] },
+];
+
+const experience = [{
+  role: "Associate Software Engineer", company: "Tech Mahindra", location: "Bengaluru, India", period: "Sept 2024 – Present",
+  bullets: [
+    "Refactored backend modules of the Drona Manufacturing System into modular Spring Boot microservices, improving maintainability and increasing uptime by 20%.",
+    "Optimized 15+ REST APIs, reducing average response time from 850ms to 320ms using indexing, query optimization, and caching.",
+    "Improved transactional efficiency using Spring Data JPA and Hibernate, reducing redundant database operations by 30%.",
+    "Enhanced API reliability with validation, centralized exception handling, and Swagger documentation.",
+    "Used Git, Maven, Docker, and Jira to support agile development and consistent builds.",
+  ],
+  tags: ["Spring Boot", "Microservices", "REST API", "JPA", "Hibernate", "Docker", "Swagger", "Git", "Maven", "Jira"],
+}];
+
+const education = [
+  { degree: "Bachelor of Engineering — Information Science & Engineering", school: "CMR Institute of Technology, Bengaluru", period: "May 2024", grade: "CGPA: 8.08 / 10" },
+  { degree: "12th Grade", school: "SRS PU College, Chitradurga, Karnataka", period: "Mar 2020", grade: "86.83%" },
+];
+
+const certifications = [
+  { name: "Docker for Java Developers", org: "Udemy" },
+  { name: "Java Spring Framework 6 with Spring Boot 3", org: "Udemy" },
+];
+
+const projects = [
+  {
+    title: "AI Resume Assistant", subtitle: "RAG-based Chatbot", year: "2024",
+    tags: ["FastAPI", "LangChain", "ChromaDB", "Gemini API", "React", "Render"],
+    bullets: [
+      "Built an AI-powered resume assistant using Retrieval-Augmented Generation (RAG) that allows users to ask natural language questions about experience, skills, and projects.",
+      "Developed a FastAPI backend that retrieves relevant resume embeddings from Chroma vector database and generates responses using Gemini LLM.",
+      "Implemented document ingestion pipeline to convert resume PDFs into semantic embeddings using LangChain text splitters and Google Generative AI embeddings.",
+      "Designed an interactive React chatbot interface integrated with the deployed backend API to enable real-time AI responses.",
+      "Deployed the backend on Render with persistent vector storage and public API access.",
+      "Optimized retrieval using semantic similarity search to ensure accurate responses based on resume content.",
+    ],
+    link: "https://portfolio-rag-backend-zons.onrender.com", featured: true,
+  },
+  {
+    title: "E-Commerce Platform", subtitle: "Full-Stack Application", year: "2024",
+    tags: ["Java", "Spring Boot", "Spring Security", "MySQL", "React.js", "Kafka", "Docker"],
+    bullets: [
+      "Built a full-stack eCommerce app supporting authentication, product catalog, cart and order management.",
+      "Implemented JWT-based security using Spring Security with role-based access control.",
+      "Integrated Apache Kafka for event-driven order and inventory processing.",
+      "Developed React.js frontend connected with backend REST APIs.",
+      "Containerized services using Docker with optimized MySQL persistence.",
+    ],
+    link: "https://github.com/iamvishnu12", featured: false,
+  },
+];
+
+const NAV = ["home","about","skills","experience","education","certifications","projects","contact"];
+
+const SOCIALS = {
+  linkedin: "https://www.linkedin.com/in/vishnu-reddy-a-m-333971308",
+  github:   "https://github.com/iamvishnu12",
+  email:    "mailto:vishnureddyam9@gmail.com",
+  phone:    "tel:+919900988387",
+};
+
+/* ─── SUB-COMPONENTS ─── */
+const SectionEyebrow = ({ children }) => (
+  <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+    <span style={{ display:"block", width:36, height:1, background:G.gold, opacity:0.45 }} />
+    <span style={{ fontFamily:G.body, fontSize:"0.7rem", letterSpacing:"0.32em", textTransform:"uppercase", color:G.gold, opacity:0.75 }}>{children}</span>
+  </div>
+);
+
+const SectionTitle = ({ children }) => (
+  <h2 style={{ fontFamily:G.display, fontSize:"clamp(2rem,4vw,3rem)", fontWeight:700, color:G.text, lineHeight:1.08, margin:"0 0 3rem" }}>{children}</h2>
+);
+
+const Tag = ({ children }) => (
+  <span style={{ display:"inline-block", padding:"3px 11px", border:`1px solid ${G.goldBdr}`, color:G.muted, fontSize:"0.66rem", letterSpacing:"0.1em", textTransform:"uppercase", fontFamily:G.body }}>{children}</span>
+);
+
+const SkillPill = ({ children }) => {
+  const [hov, setHov] = useState(false);
+  return (
+    <span onMouseOver={() => setHov(true)} onMouseOut={() => setHov(false)} style={{
+      display:"inline-flex", alignItems:"center", padding:"7px 16px",
+      border:`1px solid ${hov ? G.gold : G.goldBdr}`,
+      background: hov ? G.bgHov : G.bgCard,
+      color: hov ? G.gold : G.soft,
+      fontSize:"0.85rem", fontFamily:G.body, letterSpacing:"0.03em",
+      transition:"all 0.25s", cursor:"default",
+    }}>{children}</span>
+  );
+};
+
+const Divider = () => (
+  <div style={{ width:"100%", height:1, background:`linear-gradient(90deg, transparent, ${G.goldBdr}, transparent)` }} />
+);
+
+/* ─── WELCOME POPUP ─── */
+const WelcomePopup = ({ onClose, onOpenChat }) => {
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const sections = ['home', 'about', 'skills', 'experience', 'education', 'certifications', 'projects', 'contact'];
-      const currentSection = sections.find(section => {
-        const element = document.getElementById(section);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          return rect.top <= 100 && rect.bottom >= 100;
-        }
-        return false;
-      });
-      if (currentSection) {
-        setActiveSection(currentSection);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Small delay so the animation feels intentional
+    const t = setTimeout(() => setVisible(true), 600);
+    return () => clearTimeout(t);
   }, []);
 
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    setIsMenuOpen(false);
+  const handleOpenChat = () => {
+    onClose();
+    onOpenChat();
   };
 
-  const skills = [
-    { name: 'Java', level: 90, icon: Code },
-    { name: 'Spring Boot', level: 85, icon: Server },
-    { name: 'MySQL', level: 80, icon: Database },
-    { name: 'React.js', level: 75, icon: Globe },
-    { name: 'RESTful APIs', level: 85, icon: Server },
-    { name: 'Git', level: 80, icon: Code },
+  const suggestions = [
+    "What are Vishnu's core skills?",
+    "Tell me about his experience",
+    "What projects has he built?",
+    "Is he open to opportunities?",
   ];
 
-  const NavItem = ({ href, children, isActive }: { href: string; children: React.ReactNode; isActive: boolean }) => (
-    <button
-      onClick={() => scrollToSection(href)}
-      className={`px-4 py-2 rounded-lg transition-all duration-300 ${
-        isActive
-          ? 'bg-blue-600 text-white shadow-lg'
-          : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-      }`}
-    >
-      {children}
-    </button>
-  );
-
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-sm shadow-sm z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="font-bold text-xl text-gray-900">Vishnu Reddy</div>
-            
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-2">
-              <NavItem href="home" isActive={activeSection === 'home'}>Home</NavItem>
-              <NavItem href="about" isActive={activeSection === 'about'}>About</NavItem>
-              <NavItem href="skills" isActive={activeSection === 'skills'}>Skills</NavItem>
-              <NavItem href="experience" isActive={activeSection === 'experience'}>Experience</NavItem>
-              <NavItem href="education" isActive={activeSection === 'education'}>Education</NavItem>
-              <NavItem href="certifications" isActive={activeSection === 'certifications'}>Certifications</NavItem>
-              <NavItem href="projects" isActive={activeSection === 'projects'}>Projects</NavItem>
-              <NavItem href="contact" isActive={activeSection === 'contact'}>Contact</NavItem>
+    <>
+      {/* Backdrop */}
+      <div style={{
+        position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:300,
+        backdropFilter:"blur(6px)",
+        opacity: visible ? 1 : 0,
+        transition:"opacity 0.5s ease",
+      }} onClick={onClose} />
+
+      {/* Modal */}
+      <div style={{
+        position:"fixed", top:"50%", left:"50%",
+        transform: visible ? "translate(-50%, -50%) scale(1)" : "translate(-50%, -48%) scale(0.96)",
+        zIndex:301, width:"min(520px, 92vw)",
+        background:"#0c0c18",
+        border:`1px solid rgba(201,168,76,0.35)`,
+        boxShadow:`0 40px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(201,168,76,0.08)`,
+        opacity: visible ? 1 : 0,
+        transition:"all 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+        overflow:"hidden",
+      }}>
+
+        {/* top gold bar */}
+        <div style={{ height:2, background:`linear-gradient(90deg, transparent, ${G.gold}, transparent)` }} />
+
+        {/* close button */}
+        <button onClick={onClose} style={{
+          position:"absolute", top:16, right:16,
+          background:"none", border:"none", color:G.muted, cursor:"pointer",
+          padding:4, transition:"color 0.2s", zIndex:1,
+        }}
+          onMouseOver={e => e.currentTarget.style.color=G.gold}
+          onMouseOut={e => e.currentTarget.style.color=G.muted}
+        ><X size={18}/></button>
+
+        <div style={{ padding:"2.5rem 2.5rem 2rem" }}>
+
+          {/* AI badge */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:"1.5rem" }}>
+            <div style={{
+              width:42, height:42, borderRadius:"50%",
+              background:`linear-gradient(135deg, ${G.gold}, #8c6820)`,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              boxShadow:`0 0 20px rgba(201,168,76,0.3)`,
+              flexShrink:0,
+            }}>
+              <span style={{ fontSize:"1.2rem" }}>🤖</span>
             </div>
-
-            {/* Mobile Navigation Toggle */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50"
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-
-          {/* Mobile Navigation Menu */}
-          {isMenuOpen && (
-            <div className="md:hidden absolute top-16 left-0 right-0 bg-white shadow-lg border-t">
-              <div className="flex flex-col space-y-2 p-4">
-                <NavItem href="home" isActive={activeSection === 'home'}>Home</NavItem>
-                <NavItem href="about" isActive={activeSection === 'about'}>About</NavItem>
-                <NavItem href="skills" isActive={activeSection === 'skills'}>Skills</NavItem>
-                <NavItem href="experience" isActive={activeSection === 'experience'}>Experience</NavItem>
-                <NavItem href="education" isActive={activeSection === 'education'}>Education</NavItem>
-                <NavItem href="certifications" isActive={activeSection === 'certifications'}>Certifications</NavItem>
-                <NavItem href="projects" isActive={activeSection === 'projects'}>Projects</NavItem>
-                <NavItem href="contact" isActive={activeSection === 'contact'}>Contact</NavItem>
+            <div>
+              <div style={{ fontFamily:G.display, color:G.text, fontSize:"0.95rem" }}>AI Portfolio Assistant</div>
+              <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
+                <span style={{ width:6, height:6, borderRadius:"50%", background:"#4ade80", display:"inline-block", boxShadow:"0 0 6px #4ade80" }} />
+                <span style={{ fontSize:"0.65rem", color:"#4ade80", letterSpacing:"0.1em", fontFamily:G.body }}>Online · RAG-powered</span>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Heading */}
+          <h2 style={{ fontFamily:G.display, fontSize:"clamp(1.6rem,4vw,2.1rem)", fontWeight:700, color:G.text, lineHeight:1.12, margin:"0 0 1rem" }}>
+            Welcome to<br/>Vishnu's Portfolio
+          </h2>
+
+          {/* Intro text */}
+          <p style={{ color:G.muted, fontSize:"1rem", lineHeight:1.78, fontStyle:"italic", marginBottom:"1.75rem" }}>
+            I'm an AI assistant trained on Vishnu's resume, projects, and experience. Ask me anything — I'll give you real answers instantly.
+          </p>
+
+          {/* Suggestion chips */}
+          <div style={{ marginBottom:"2rem" }}>
+            <div style={{ fontSize:"0.65rem", letterSpacing:"0.22em", textTransform:"uppercase", color:G.muted, marginBottom:"0.75rem", fontFamily:G.body }}>Try asking</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:"0.5rem" }}>
+              {suggestions.map(s => (
+                <button key={s} onClick={handleOpenChat} style={{
+                  padding:"6px 14px", border:`1px solid ${G.goldBdr}`,
+                  background:G.bgCard, color:G.soft, fontFamily:G.body,
+                  fontSize:"0.82rem", cursor:"pointer", transition:"all 0.2s",
+                  textAlign:"left",
+                }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor=G.gold; e.currentTarget.style.color=G.gold; e.currentTarget.style.background=G.bgHov; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor=G.goldBdr; e.currentTarget.style.color=G.soft; e.currentTarget.style.background=G.bgCard; }}
+                >"{s}"</button>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA buttons */}
+          <div style={{ display:"flex", gap:"0.75rem", flexWrap:"wrap" }}>
+            <button onClick={handleOpenChat} style={{
+              flex:1, minWidth:180,
+              padding:"13px 24px",
+              background:`linear-gradient(135deg, ${G.gold}, #8c6820)`,
+              border:"none", color:G.bg, cursor:"pointer",
+              fontFamily:G.body, fontSize:"0.82rem", letterSpacing:"0.14em",
+              textTransform:"uppercase", transition:"opacity 0.2s",
+              display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+              boxShadow:`0 4px 20px rgba(201,168,76,0.3)`,
+            }}
+              onMouseOver={e => e.currentTarget.style.opacity="0.88"}
+              onMouseOut={e => e.currentTarget.style.opacity="1"}
+            >
+              <MessageCircle size={15} /> Chat with AI
+            </button>
+            <button onClick={onClose} style={{
+              padding:"13px 24px",
+              border:`1px solid ${G.goldBdr}`,
+              background:"transparent", color:G.muted, cursor:"pointer",
+              fontFamily:G.body, fontSize:"0.82rem", letterSpacing:"0.14em",
+              textTransform:"uppercase", transition:"all 0.2s",
+            }}
+              onMouseOver={e => { e.currentTarget.style.color=G.gold; e.currentTarget.style.borderColor=G.gold; }}
+              onMouseOut={e => { e.currentTarget.style.color=G.muted; e.currentTarget.style.borderColor=G.goldBdr; }}
+            >
+              Explore Portfolio
+            </button>
+          </div>
+        </div>
+
+        {/* bottom band */}
+        <div style={{ padding:"1rem 2.5rem", borderTop:`1px solid rgba(201,168,76,0.08)`, background:"rgba(201,168,76,0.02)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <span style={{ fontSize:"0.68rem", color:G.muted, letterSpacing:"0.08em", fontFamily:G.body, fontStyle:"italic" }}>
+            Powered by FastAPI · LangChain · Gemini
+          </span>
+          <div style={{ display:"flex", gap:8 }}>
+            {["🔒 Private","⚡ Real-time"].map(t => (
+              <span key={t} style={{ fontSize:"0.62rem", color:G.muted, letterSpacing:"0.08em", fontFamily:G.body }}>{t}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+/* ─── MAIN APP ─── */
+export default function App() {
+  const [active, setActive]       = useState("home");
+  const [scrolled, setScrolled]   = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [chatOpen, setChatOpen]   = useState(false);
+  const [messages, setMessages]   = useState([
+    { role:"assistant", content:"Hi! 👋 I'm Vishnu's AI assistant, trained on his resume and projects. What would you like to know?" }
+  ]);
+  const [input, setInput]     = useState("");
+  const [loading, setLoading] = useState(false);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    const fn = () => {
+      setScrolled(window.scrollY > 50);
+      const cur = NAV.find(s => {
+        const el = document.getElementById(s);
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        return r.top <= 130 && r.bottom >= 130;
+      });
+      if (cur) setActive(cur);
+    };
+    window.addEventListener("scroll", fn);
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages, loading]);
+
+  const goto = id => {
+    document.getElementById(id)?.scrollIntoView({ behavior:"smooth", block:"start" });
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+    const userMsg = { role:"user", content: input };
+    setMessages(p => [...p, userMsg]);
+    const q = input; setInput(""); setLoading(true);
+    try {
+      const res = await fetch("https://portfolio-rag-backend-zons.onrender.com/ask", {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ question: q })
+      });
+      const data = await res.json();
+      setMessages(p => [...p, { role:"assistant", content: data.answer }]);
+    } catch {
+      setMessages(p => [...p, { role:"assistant", content:"Something went wrong. Please try again." }]);
+    }
+    setLoading(false);
+  };
+
+  const openChat = () => { setChatOpen(true); };
+
+  return (
+    <div style={{ fontFamily:G.body, background:G.bg, color:G.text, minHeight:"100vh", overflowX:"hidden" }}>
+
+      {/* ══════════ WELCOME POPUP ══════════ */}
+      {showWelcome && (
+        <WelcomePopup
+          onClose={() => setShowWelcome(false)}
+          onOpenChat={() => { setShowWelcome(false); openChat(); }}
+        />
+      )}
+
+      {/* ══════════ NAV ══════════ */}
+      <nav style={{
+        position:"fixed", top:0, width:"100%", zIndex:100,
+        background: scrolled ? "rgba(7,7,14,0.94)" : "transparent",
+        backdropFilter: scrolled ? "blur(18px)" : "none",
+        borderBottom: scrolled ? `1px solid ${G.goldBdr}` : "1px solid transparent",
+        transition:"all 0.4s ease",
+      }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 2rem", display:"flex", alignItems:"center", justifyContent:"space-between", height:60 }}>
+          <span style={{ fontFamily:G.display, fontSize:"1.15rem", color:G.gold, letterSpacing:"0.06em" }}>VR</span>
+          <div style={{ display:"flex", gap:2, flexWrap:"wrap" }}>
+            {NAV.map(link => (
+              <button key={link} onClick={() => goto(link)} style={{
+                padding:"5px 13px", border:"none",
+                borderBottom:`1px solid ${active===link ? G.gold : "transparent"}`,
+                background:"transparent", cursor:"pointer", fontFamily:G.body,
+                fontSize:"0.72rem", letterSpacing:"0.14em", textTransform:"uppercase",
+                color: active===link ? G.gold : G.muted, transition:"all 0.2s",
+              }}
+                onMouseOver={e => { if (active!==link) e.currentTarget.style.color = G.soft; }}
+                onMouseOut={e => { if (active!==link) e.currentTarget.style.color = G.muted; }}
+              >{link}</button>
+            ))}
+          </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section id="home" className="min-h-screen flex items-center bg-gradient-to-br from-blue-50 via-white to-teal-50 pt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center">
-            <div className="mb-8">
-              <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-blue-600 to-teal-600 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-2xl">
-                VR
-              </div>
-            </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Vishnu Reddy <span className="bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">A M</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-4">Associate Software Engineer</p>
-            <p className="text-lg text-gray-500 mb-8 max-w-2xl mx-auto">
-              Backend development specialist with expertise in Java, Spring Boot, and MySQL. 
-              Passionate about building scalable enterprise solutions.
-            </p>
-            <div className="flex justify-center space-x-4 mb-12">
-              <a href="mailto:vishnureddy.am@gmail.com" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl">
-                Get In Touch
-              </a>
-              <button 
-                onClick={() => scrollToSection('projects')}
-                className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300"
-              >
-                View Projects
-              </button>
-            </div>
-            <button 
-              onClick={() => scrollToSection('about')}
-              className="animate-bounce text-blue-600 hover:text-blue-700 transition-colors duration-300"
-            >
-              <ChevronDown size={32} />
-            </button>
+      {/* ══════════ HERO ══════════ */}
+      <section id="home" style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 70% 55% at 50% 42%, rgba(201,168,76,0.065) 0%, transparent 68%)", pointerEvents:"none" }} />
+        <div style={{ position:"absolute", top:"18%", left:"7%", width:1, height:"58%", background:`linear-gradient(to bottom, transparent, ${G.goldBdr}, transparent)` }} />
+        <div style={{ position:"absolute", top:"18%", right:"7%", width:1, height:"58%", background:`linear-gradient(to bottom, transparent, ${G.goldBdr}, transparent)` }} />
+
+        <div style={{ textAlign:"center", padding:"0 2rem", zIndex:1, maxWidth:720 }}>
+          <div style={{
+            width:100, height:100, margin:"0 auto 2.5rem",
+            border:`1px solid rgba(201,168,76,0.5)`,
+            borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
+            fontFamily:G.display, fontSize:"2.2rem", color:G.gold,
+            animation:"heroGlow 3.5s ease-in-out infinite",
+          }}>VR</div>
+
+          <div style={{ fontSize:"0.68rem", letterSpacing:"0.38em", textTransform:"uppercase", color:G.gold, opacity:0.75, marginBottom:"1.1rem" }}>
+            Associate Software Engineer · Tech Mahindra · Bengaluru
           </div>
+
+          <h1 style={{
+            fontFamily:G.display, fontSize:"clamp(3.2rem,8vw,5.8rem)", fontWeight:700,
+            lineHeight:1.04, margin:"0 0 1.4rem",
+            background:`linear-gradient(140deg, #f2e8cc 0%, ${G.gold} 50%, #f2e8cc 100%)`,
+            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+          }}>
+            Vishnu<br/>Reddy A M
+          </h1>
+
+          <p style={{ color:G.muted, fontSize:"1.05rem", lineHeight:1.78, fontStyle:"italic", marginBottom:"2.8rem" }}>
+            Backend specialist — designing secure REST APIs, scalable microservices<br/>
+            and reliable enterprise systems with Java &amp; Spring Boot.
+          </p>
+
+          <div style={{ display:"flex", gap:"1rem", justifyContent:"center", flexWrap:"wrap", marginBottom:"2.5rem" }}>
+            {[["View Projects","projects",true],["Get In Touch","contact",false]].map(([label,id,primary]) => (
+              <button key={id} onClick={() => goto(id)} style={{
+                padding:"11px 30px", fontFamily:G.body,
+                border:`1px solid ${primary ? G.gold : G.goldBdr}`,
+                background:"transparent", color: primary ? G.gold : G.muted,
+                cursor:"pointer", fontSize:"0.78rem", letterSpacing:"0.16em", textTransform:"uppercase", transition:"all 0.3s",
+              }}
+                onMouseOver={e => { e.currentTarget.style.background=primary?G.gold:"transparent"; e.currentTarget.style.color=primary?G.bg:G.gold; e.currentTarget.style.borderColor=G.gold; }}
+                onMouseOut={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color=primary?G.gold:G.muted; e.currentTarget.style.borderColor=primary?G.gold:G.goldBdr; }}
+              >{label}</button>
+            ))}
+          </div>
+
+          <div style={{ display:"flex", gap:"1.5rem", justifyContent:"center" }}>
+            {[
+              { icon:<Linkedin size={16}/>, href:SOCIALS.linkedin, label:"LinkedIn" },
+              { icon:<Github size={16}/>,   href:SOCIALS.github,   label:"GitHub"   },
+              { icon:<Mail size={16}/>,     href:SOCIALS.email,    label:"Email"    },
+              { icon:<Phone size={16}/>,    href:SOCIALS.phone,    label:"Phone"    },
+            ].map(({ icon, href, label }) => (
+              <a key={label} href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" title={label}
+                style={{ color:G.muted, display:"flex", alignItems:"center", transition:"color 0.2s" }}
+                onMouseOver={e => e.currentTarget.style.color=G.gold}
+                onMouseOut={e => e.currentTarget.style.color=G.muted}
+              >{icon}</a>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ position:"absolute", bottom:32, left:"50%", transform:"translateX(-50%)" }}>
+          <div style={{ width:1, height:52, background:`linear-gradient(to bottom, ${G.gold}, transparent)`, margin:"0 auto", animation:"scrollLine 2s ease-in-out infinite", opacity:0.5 }} />
         </div>
       </section>
 
-      {/* About Section */}
-      <section id="about" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">About Me</h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-teal-600 mx-auto rounded-full"></div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="w-full h-96 bg-gradient-to-br from-blue-100 to-teal-100 rounded-2xl flex items-center justify-center mb-6">
-                <User size={120} className="text-blue-600" />
-              </div>
-            </div>
-            <div>
-              <h3 className="text-2xl font-semibold text-gray-900 mb-6">Professional Summary</h3>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                Detail-oriented and analytical Associate Software Engineer with hands-on experience in backend development using 
-                Java, Spring Boot, and MySQL. Proven track record of troubleshooting, enhancing, and supporting manufacturing 
-                enterprise systems.
-              </p>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                Adept at identifying and resolving application issues in client-focused projects. Knowledgeable in frontend 
-                development with React.js. Committed to delivering scalable solutions and collaborating with cross-functional 
-                teams to drive process improvement and project success.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg">
-                  <MapPin className="text-blue-600" size={20} />
-                  <span className="text-gray-700">Bengaluru, India</span>
-                </div>
-                <div className="flex items-center space-x-3 p-4 bg-teal-50 rounded-lg">
-                  <Briefcase className="text-teal-600" size={20} />
-                  <span className="text-gray-700">Tech Mahindra</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Divider />
 
-      {/* Skills Section */}
-      <section id="skills" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Technical Skills</h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-teal-600 mx-auto rounded-full"></div>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {skills.map((skill, index) => {
-              const IconComponent = skill.icon;
-              return (
-                <div key={index} className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className="p-3 bg-gradient-to-br from-blue-600 to-teal-600 rounded-lg">
-                      <IconComponent className="text-white" size={24} />
+      {/* ══════════ ABOUT ══════════ */}
+      <section id="about" style={{ padding:"120px 2rem" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <Reveal>
+            <SectionEyebrow>About</SectionEyebrow>
+            <div style={{ display:"grid", gridTemplateColumns:"1.1fr 0.9fr", gap:"5rem", alignItems:"start" }}>
+              <div>
+                <SectionTitle>Backend-focused<br/>engineer at heart</SectionTitle>
+                <p style={{ color:G.muted, lineHeight:1.85, fontSize:"1.05rem", marginBottom:"1.4rem" }}>
+                  Backend-focused Software Engineer with strong experience in Java, Spring Boot, and MySQL. Proven ability to design secure REST APIs, implement JWT-based authentication, optimize databases, and build scalable microservices.
+                </p>
+                <p style={{ color:G.muted, lineHeight:1.85, fontSize:"1.05rem" }}>
+                  Passionate about performance, maintainability, and delivering reliable enterprise systems — currently contributing to mission-critical manufacturing software at Tech Mahindra.
+                </p>
+                <div style={{ display:"flex", gap:"2.5rem", marginTop:"2.5rem", paddingTop:"2rem", borderTop:`1px solid ${G.goldBdr}` }}>
+                  {[["20%","Uptime Improved"],["15+","APIs Optimized"],["30%","DB Ops Reduced"]].map(([n,l]) => (
+                    <div key={l}>
+                      <div style={{ fontFamily:G.display, fontSize:"2rem", color:G.gold, lineHeight:1 }}>{n}</div>
+                      <div style={{ fontSize:"0.68rem", letterSpacing:"0.14em", textTransform:"uppercase", color:G.muted, marginTop:5 }}>{l}</div>
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900">{skill.name}</h3>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-blue-600 to-teal-600 h-2 rounded-full transition-all duration-1000 ease-out"
-                      style={{ width: `${skill.level}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">{skill.level}% Proficiency</p>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+              <div style={{ position:"relative" }}>
+                <div style={{ border:`1px solid ${G.goldBdr}`, background:G.bgCard, padding:"2.25rem", position:"relative" }}>
+                  <div style={{ position:"absolute", top:-10, right:-10, width:20, height:20, border:`1px solid ${G.goldBdr}`, background:G.bg }} />
+                  <div style={{ position:"absolute", bottom:-10, left:-10, width:20, height:20, border:`1px solid ${G.goldBdr}`, background:G.bg }} />
+                  {[
+                    ["📍","Location","Bengaluru, India"],
+                    ["📧","Email","vishnureddyam9@gmail.com"],
+                    ["📞","Phone","+91 9900988387"],
+                    ["🏢","Company","Tech Mahindra"],
+                    ["🎓","Education","CMR Institute of Technology, 2024"],
+                    ["✅","Status","Open to Opportunities"],
+                  ].map(([icon,label,value]) => (
+                    <div key={label} style={{ display:"flex", gap:"1rem", padding:"0.9rem 0", borderBottom:`1px solid rgba(201,168,76,0.07)` }}>
+                      <span style={{ fontSize:"1rem", opacity:0.65, flexShrink:0 }}>{icon}</span>
+                      <div>
+                        <div style={{ fontSize:"0.64rem", letterSpacing:"0.15em", textTransform:"uppercase", color:G.muted }}>{label}</div>
+                        <div style={{ color:"#c0b090", fontSize:"0.88rem", marginTop:2 }}>{value}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* Experience Section */}
-      <section id="experience" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Professional Experience</h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-teal-600 mx-auto rounded-full"></div>
-          </div>
-          <div className="relative">
-            <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-blue-600 to-teal-600 rounded-full"></div>
-            <div className="relative">
-              <div className="flex items-center justify-center mb-8">
-                <div className="bg-white p-4 rounded-full shadow-lg border-4 border-blue-600">
-                  <Briefcase className="text-blue-600" size={24} />
-                </div>
-              </div>
-              <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Associate Software Engineer</h3>
-                  <p className="text-lg text-blue-600 font-semibold mb-1">Tech Mahindra</p>
-                  <p className="text-gray-500 flex items-center justify-center space-x-2">
-                    <Calendar size={16} />
-                    <span>September 2024 – Present</span>
-                  </p>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                    <p className="text-gray-700">Contributed to the Drona manufacturing enterprise system project, designed to track and manage end-to-end manufacturing processes.</p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                    <p className="text-gray-700">Analyzed incomplete project modules, identified logic gaps, and provided effective solutions to address technical issues within the application lifecycle.</p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                    <p className="text-gray-700">Rectified system integration errors and ensured seamless data flow across various stages of the manufacturing process.</p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                    <p className="text-gray-700">Collaborated with cross-functional teams to understand user requirements and software design constraints for ongoing process improvement.</p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                    <p className="text-gray-700">Provided backend technical support, including debugging, system maintenance, and process optimization to enhance system reliability.</p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                    <p className="text-gray-700">Documented solutions and resolution steps for recurring issues to improve knowledge sharing and future troubleshooting.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Divider />
 
-      {/* Education Section */}
-      <section id="education" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Education</h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-teal-600 mx-auto rounded-full"></div>
-          </div>
-          <div className="space-y-8">
-            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="flex items-start space-x-4">
-                <div className="p-3 bg-gradient-to-br from-blue-600 to-teal-600 rounded-lg flex-shrink-0">
-                  <GraduationCap className="text-white" size={24} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Bachelor of Engineering: Information Science and Engineering</h3>
-                  <p className="text-blue-600 font-semibold mb-1">CMR Institute of Technology, Bengaluru</p>
-                  <div className="flex items-center space-x-4 text-gray-500 mb-2">
-                    <span>May 2024</span>
-                    <span>•</span>
-                    <span className="font-semibold text-green-600">CGPA: 8.08 / 10</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="flex items-start space-x-4">
-                <div className="p-3 bg-gradient-to-br from-teal-600 to-blue-600 rounded-lg flex-shrink-0">
-                  <GraduationCap className="text-white" size={24} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">12th Grade</h3>
-                  <p className="text-teal-600 font-semibold mb-1">SRS PU College, Chitradurga, Karnataka</p>
-                  <div className="flex items-center space-x-4 text-gray-500 mb-2">
-                    <span>March 2020</span>
-                    <span>•</span>
-                    <span className="font-semibold text-green-600">Percentage: 86.83%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="flex items-start space-x-4">
-                <div className="p-3 bg-gradient-to-br from-orange-600 to-red-600 rounded-lg flex-shrink-0">
-                  <GraduationCap className="text-white" size={24} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">10th Grade</h3>
-                  <p className="text-orange-600 font-semibold mb-1">SRS Heritage School, Bengaluru</p>
-                  <div className="flex items-center space-x-4 text-gray-500 mb-2">
-                    <span>March 2018</span>
-                    <span>•</span>
-                    <span className="font-semibold text-green-600">Percentage: 73.4%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Certifications Section */}
-      <section id="certifications" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Certifications</h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-teal-600 mx-auto rounded-full"></div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-gradient-to-br from-teal-50 to-green-50 p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
-              <div className="flex items-start space-x-4">
-                <div className="p-3 bg-gradient-to-br from-teal-600 to-green-600 rounded-lg flex-shrink-0">
-                  <Award className="text-white" size={24} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Docker For Java Developers</h3>
-                  <p className="text-teal-600 font-semibold mb-1">Udemy Course</p>
-                  <p className="text-gray-500 mb-4">March 2025</p>
-                  <a 
-                    href="https://drive.google.com/file/d/1uTXrGQ4C-B8y0ua-u-MscCCQpCoI985v/view?usp=sharing" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
-                  >
-                    <span>View Certificate</span>
-                    <ExternalLink size={16} />
-                  </a>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gradient-to-br from-blue-50 to-teal-50 p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
-              <div className="flex items-start space-x-4">
-                <div className="p-3 bg-gradient-to-br from-blue-600 to-teal-600 rounded-lg flex-shrink-0">
-                  <Award className="text-white" size={24} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Java Spring Framework 6 with Spring Boot 3</h3>
-                  <p className="text-blue-600 font-semibold mb-4">Udemy</p>
-                  <a 
-                    href="https://drive.google.com/file/d/100seWYCBtIRvkakifCRrLzfbQPzrEaZr/view?usp=sharing" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
-                  >
-                    <span>View Certificate</span>
-                    <ExternalLink size={16} />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Projects Section */}
-      <section id="projects" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Projects</h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-teal-600 mx-auto rounded-full"></div>
-          </div>
-          <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="flex items-start space-x-4 mb-6">
-              <div className="p-3 bg-gradient-to-br from-orange-600 to-red-600 rounded-lg flex-shrink-0">
-                <Globe className="text-white" size={24} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Full-stack E-commerce Platform</h3>
-                <p className="text-orange-600 font-semibold mb-4">Spring Boot | React.js | MySQL | 2025</p>
-              </div>
-            </div>
-            <div className="space-y-4 mb-6">
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-gray-700">Developed a full-stack e-commerce platform using Spring Boot, React.js, and MySQL.</p>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-gray-700">Designed and implemented backend APIs for product management, user authentication, and order processing.</p>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-gray-700">Built a responsive frontend with React.js for seamless user experience across devices.</p>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-gray-700">Integrated database schema and optimized MySQL queries to ensure efficient data handling.</p>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-gray-700">Applied best practices for security and performance throughout the application.</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">Spring Boot</span>
-              <span className="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm font-semibold">React.js</span>
-              <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold">MySQL</span>
-              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">RESTful APIs</span>
-              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">Full-Stack</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section id="contact" className="py-20 bg-gradient-to-br from-blue-900 via-blue-800 to-teal-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Let's Connect</h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-orange-400 to-red-400 mx-auto rounded-full"></div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-12">
-            <div>
-              <h3 className="text-2xl font-semibold mb-6">Get in Touch</h3>
-              <p className="text-blue-200 mb-8 leading-relaxed">
-                I'm always open to discussing new opportunities, interesting projects, or just connecting with fellow developers. 
-                Feel free to reach out!
-              </p>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-blue-700 rounded-lg">
-                    <Mail className="text-white" size={20} />
-                  </div>
+      {/* ══════════ SKILLS ══════════ */}
+      <section id="skills" style={{ padding:"110px 2rem", background:G.bgAlt }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <Reveal>
+            <SectionEyebrow>Skills</SectionEyebrow>
+            <SectionTitle>Technical Arsenal</SectionTitle>
+          </Reveal>
+          <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+            {skillGroups.map((group, gi) => (
+              <Reveal key={group.label} delay={gi * 0.07}>
+                <div style={{ display:"grid", gridTemplateColumns:"220px 1fr", gap:"2rem", alignItems:"start", padding:"2.2rem 0", borderBottom:`1px solid rgba(201,168,76,0.08)` }}>
                   <div>
-                    <p className="font-semibold">Email</p>
-                    <a href="mailto:vishnureddy.am@gmail.com" className="text-blue-200 hover:text-white transition-colors duration-300">
-                      vishnureddy.am@gmail.com
-                    </a>
+                    <div style={{ fontFamily:G.display, fontSize:"1.05rem", color:G.gold, marginBottom:6 }}>{group.label}</div>
+                    <div style={{ width:24, height:1, background:G.gold, opacity:0.3 }} />
+                  </div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:"0.55rem" }}>
+                    {group.items.map(item => <SkillPill key={item}>{item}</SkillPill>)}
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-teal-700 rounded-lg">
-                    <Phone className="text-white" size={20} />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <Divider />
+
+      {/* ══════════ EXPERIENCE ══════════ */}
+      <section id="experience" style={{ padding:"120px 2rem" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <Reveal>
+            <SectionEyebrow>Experience</SectionEyebrow>
+            <SectionTitle>Work History</SectionTitle>
+          </Reveal>
+          <div style={{ position:"relative", paddingLeft:"2.5rem", borderLeft:`1px solid ${G.goldBdr}` }}>
+            {experience.map((exp, i) => (
+              <Reveal key={i} delay={i * 0.1}>
+                <div style={{ marginBottom:"3rem", position:"relative" }}>
+                  <div style={{ position:"absolute", left:-42, top:8, width:14, height:14, borderRadius:"50%", background:G.gold, border:`2px solid ${G.bg}`, boxShadow:`0 0 0 4px rgba(201,168,76,0.18)` }} />
+                  <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:"0.5rem", marginBottom:"0.6rem" }}>
+                    <div>
+                      <h3 style={{ fontFamily:G.display, fontSize:"1.55rem", color:G.text, margin:0 }}>{exp.role}</h3>
+                      <div style={{ color:G.gold, fontSize:"0.9rem", marginTop:4, opacity:0.85 }}>{exp.company} · {exp.location}</div>
+                    </div>
+                    <div style={{ fontSize:"0.7rem", letterSpacing:"0.14em", textTransform:"uppercase", color:G.muted, paddingTop:4 }}>{exp.period}</div>
                   </div>
-                  <div>
-                    <p className="font-semibold">Phone</p>
-                    <a href="tel:+919900988387" className="text-blue-200 hover:text-white transition-colors duration-300">
-                      +91-99009 88387
-                    </a>
+                  <ul style={{ padding:0, margin:"1rem 0 1.25rem", display:"flex", flexDirection:"column", gap:"0.6rem" }}>
+                    {exp.bullets.map((b,bi) => (
+                      <li key={bi} style={{ color:G.muted, lineHeight:1.78, fontSize:"0.97rem", listStyle:"none", position:"relative", paddingLeft:"1.2rem" }}>
+                        <span style={{ position:"absolute", left:0, top:"0.65em", display:"block", width:5, height:5, borderRadius:"50%", background:G.gold, opacity:0.5 }} />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+                    {exp.tags.map(t => <Tag key={t}>{t}</Tag>)}
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-orange-700 rounded-lg">
-                    <MapPin className="text-white" size={20} />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Location</p>
-                    <p className="text-blue-200">Bengaluru, India – 560100</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-2xl font-semibold mb-6">Connect on Social</h3>
-              <div className="space-y-4">
-                <a 
-                  href="https://linkedin.com/in/vishnu-reddy-a-m-333971308" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-4 p-4 bg-blue-800/50 hover:bg-blue-700 rounded-lg transition-all duration-300 hover:-translate-y-1"
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <Divider />
+
+      {/* ══════════ EDUCATION ══════════ */}
+      <section id="education" style={{ padding:"110px 2rem", background:G.bgAlt }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <Reveal>
+            <SectionEyebrow>Education</SectionEyebrow>
+            <SectionTitle>Academic Background</SectionTitle>
+          </Reveal>
+          <div style={{ display:"flex", flexDirection:"column", gap:"1.5rem" }}>
+            {education.map((edu, i) => (
+              <Reveal key={i} delay={i * 0.1}>
+                <div style={{ border:`1px solid ${G.goldBdr}`, padding:"2rem 2.5rem", background:G.bgCard, position:"relative", maxWidth:800, transition:"all 0.3s" }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor="rgba(201,168,76,0.42)"; e.currentTarget.style.background=G.bgHov; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor=G.goldBdr; e.currentTarget.style.background=G.bgCard; }}
                 >
-                  <div className="p-3 bg-blue-600 rounded-lg">
-                    <Linkedin className="text-white" size={24} />
+                  <div style={{ position:"absolute", top:0, left:0, width:3, height:"100%", background:`linear-gradient(to bottom, ${G.gold}, transparent)` }} />
+                  <div style={{ display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:"0.5rem", marginBottom:6 }}>
+                    <h3 style={{ fontFamily:G.display, fontSize:"1.2rem", color:G.text, margin:0 }}>{edu.degree}</h3>
+                    <span style={{ fontSize:"0.7rem", letterSpacing:"0.14em", color:G.muted, textTransform:"uppercase" }}>{edu.period}</span>
                   </div>
-                  <div>
-                    <p className="font-semibold">LinkedIn</p>
-                    <p className="text-blue-200">Professional Network</p>
-                  </div>
-                  <ExternalLink className="text-blue-200 ml-auto" size={20} />
-                </a>
-                <a 
-                  href="https://github.com/iamvishnu12" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-4 p-4 bg-teal-800/50 hover:bg-teal-700 rounded-lg transition-all duration-300 hover:-translate-y-1"
-                >
-                  <div className="p-3 bg-teal-600 rounded-lg">
-                    <Github className="text-white" size={24} />
-                  </div>
-                  <div>
-                    <p className="font-semibold">GitHub</p>
-                    <p className="text-blue-200">Code Repository</p>
-                  </div>
-                  <ExternalLink className="text-blue-200 ml-auto" size={20} />
-                </a>
-              </div>
-            </div>
+                  <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:"0.85rem" }}>{edu.school}</div>
+                  <div style={{ fontFamily:G.display, fontSize:"1.5rem", color:G.gold }}>{edu.grade}</div>
+                </div>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <p className="text-gray-400">© 2024 Vishnu Reddy A M. All rights reserved.</p>
-            <p className="text-gray-500 mt-2">Built with React.js & Tailwind CSS</p>
+      <Divider />
+
+      {/* ══════════ CERTIFICATIONS ══════════ */}
+      <section id="certifications" style={{ padding:"120px 2rem" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <Reveal>
+            <SectionEyebrow>Certifications</SectionEyebrow>
+            <SectionTitle>Credentials</SectionTitle>
+          </Reveal>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:"1.5rem" }}>
+            {certifications.map((c, i) => (
+              <Reveal key={i} delay={i * 0.1}>
+                <div style={{ border:`1px solid ${G.goldBdr}`, padding:"2rem", background:G.bgCard, transition:"all 0.3s", cursor:"default" }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor="rgba(201,168,76,0.42)"; e.currentTarget.style.background=G.bgHov; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor=G.goldBdr; e.currentTarget.style.background=G.bgCard; }}
+                >
+                  <Award size={20} color={G.gold} style={{ opacity:0.7, marginBottom:"1.1rem" }} />
+                  <h4 style={{ fontFamily:G.display, fontSize:"1.1rem", color:G.text, margin:"0 0 0.5rem", lineHeight:1.35 }}>{c.name}</h4>
+                  <div style={{ color:G.muted, fontSize:"0.82rem", letterSpacing:"0.06em" }}>{c.org}</div>
+                </div>
+              </Reveal>
+            ))}
           </div>
         </div>
+      </section>
+
+      <Divider />
+
+      {/* ══════════ PROJECTS ══════════ */}
+      <section id="projects" style={{ padding:"110px 2rem", background:G.bgAlt }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <Reveal>
+            <SectionEyebrow>Projects</SectionEyebrow>
+            <SectionTitle>Selected Work</SectionTitle>
+          </Reveal>
+          <div style={{ display:"flex", flexDirection:"column", gap:"1.5rem" }}>
+            {projects.map((p, i) => (
+              <Reveal key={i} delay={i * 0.1}>
+                <div style={{
+                  border:`1px solid ${p.featured ? "rgba(201,168,76,0.38)" : G.goldBdr}`,
+                  padding:"2.5rem",
+                  background: p.featured ? "rgba(201,168,76,0.03)" : G.bgCard,
+                  position:"relative", overflow:"hidden", transition:"all 0.3s",
+                }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor="rgba(201,168,76,0.55)"; e.currentTarget.style.background="rgba(201,168,76,0.055)"; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor=p.featured?"rgba(201,168,76,0.38)":G.goldBdr; e.currentTarget.style.background=p.featured?"rgba(201,168,76,0.03)":G.bgCard; }}
+                >
+                  <div style={{ position:"absolute", top:0, left:0, right:0, height:p.featured?2:1, background:`linear-gradient(90deg, transparent, ${p.featured?G.gold:"rgba(201,168,76,0.55)"}, transparent)` }} />
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"1.4rem", flexWrap:"wrap", gap:"0.75rem" }}>
+                    <div>
+                      <div style={{ display:"flex", alignItems:"center", gap:"0.75rem", marginBottom:4 }}>
+                        <h3 style={{ fontFamily:G.display, fontSize:p.featured?"1.65rem":"1.4rem", color:G.text, margin:0 }}>{p.title}</h3>
+                        {p.featured && <span style={{ fontSize:"0.6rem", letterSpacing:"0.2em", textTransform:"uppercase", color:G.bg, background:G.gold, padding:"3px 8px", fontFamily:G.body }}>Featured</span>}
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:"0.75rem" }}>
+                        <span style={{ fontSize:"0.72rem", color:G.gold, letterSpacing:"0.1em", opacity:0.75, fontStyle:"italic" }}>{p.subtitle}</span>
+                        <span style={{ width:3, height:3, borderRadius:"50%", background:G.muted, display:"inline-block", opacity:0.5 }} />
+                        <span style={{ fontSize:"0.68rem", color:G.muted, letterSpacing:"0.15em" }}>{p.year}</span>
+                      </div>
+                    </div>
+                    <a href={p.link} target="_blank" rel="noopener noreferrer"
+                      style={{ display:"flex", alignItems:"center", gap:6, color:G.gold, opacity:0.6, textDecoration:"none", fontSize:"0.72rem", letterSpacing:"0.12em", textTransform:"uppercase", fontFamily:G.body, transition:"opacity 0.2s" }}
+                      onMouseOver={e => e.currentTarget.style.opacity=1}
+                      onMouseOut={e => e.currentTarget.style.opacity=0.6}
+                    >View <ArrowUpRight size={14} /></a>
+                  </div>
+                  <ul style={{ padding:0, margin:"0 0 1.75rem", display:"grid", gridTemplateColumns:p.featured?"1fr 1fr":"1fr", gap:"0.55rem 2rem" }}>
+                    {p.bullets.map((b,bi) => (
+                      <li key={bi} style={{ color:G.muted, fontSize:"0.92rem", lineHeight:1.72, listStyle:"none", position:"relative", paddingLeft:"1.1rem" }}>
+                        <span style={{ position:"absolute", left:0, top:"0.65em", width:4, height:4, borderRadius:"50%", background:G.gold, opacity:0.45, display:"block" }} />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+                    {p.tags.map(t => <Tag key={t}>{t}</Tag>)}
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <Divider />
+
+      {/* ══════════ CONTACT ══════════ */}
+      <section id="contact" style={{ padding:"140px 2rem", textAlign:"center" }}>
+        <div style={{ maxWidth:560, margin:"0 auto" }}>
+          <Reveal>
+            <SectionEyebrow>Contact</SectionEyebrow>
+            <h2 style={{ fontFamily:G.display, fontSize:"clamp(2.2rem,5vw,3.2rem)", fontWeight:700, color:G.text, lineHeight:1.08, margin:"0 0 1.4rem" }}>
+              Let's Build<br/>Something Together
+            </h2>
+            <p style={{ color:G.muted, lineHeight:1.82, fontSize:"1.02rem", fontStyle:"italic", marginBottom:"3rem" }}>
+              I'm open to new opportunities. Whether you have a role in mind or just want to connect, I'd love to hear from you.
+            </p>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"1.1rem" }}>
+              {[
+                { icon:<Mail size={15}/>,     label:"vishnureddyam9@gmail.com",                   href:SOCIALS.email },
+                { icon:<Phone size={15}/>,    label:"+91 9900988387",                              href:SOCIALS.phone },
+                { icon:<Linkedin size={15}/>, label:"linkedin.com/in/vishnu-reddy-a-m-333971308", href:SOCIALS.linkedin },
+                { icon:<Github size={15}/>,   label:"github.com/iamvishnu12",                     href:SOCIALS.github },
+              ].map(({ icon, label, href }) => (
+                <a key={label} href={href} target={href.startsWith("http")?"_blank":undefined} rel="noopener noreferrer"
+                  style={{ display:"flex", alignItems:"center", gap:"0.65rem", color:G.muted, textDecoration:"none", fontSize:"0.95rem", transition:"color 0.2s" }}
+                  onMouseOver={e => e.currentTarget.style.color=G.gold}
+                  onMouseOut={e => e.currentTarget.style.color=G.muted}
+                >
+                  <span style={{ color:G.gold, opacity:0.65 }}>{icon}</span>{label}
+                </a>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ══════════ FOOTER ══════════ */}
+      <footer style={{ borderTop:`1px solid ${G.goldBdr}`, padding:"1.75rem 2rem", textAlign:"center", color:"#2e2a1e", fontSize:"0.75rem", letterSpacing:"0.1em" }}>
+        © {new Date().getFullYear()} Vishnu Reddy A M — Crafted with intention.
       </footer>
+
+      {/* ══════════ CHAT FAB ══════════ */}
+      {!chatOpen && (
+        <div style={{ position:"fixed", bottom:28, right:28, zIndex:200, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:10 }}>
+          {/* Tooltip bubble */}
+          <div style={{
+            background:"#0c0c18", border:`1px solid rgba(201,168,76,0.3)`,
+            padding:"8px 14px", fontSize:"0.78rem", color:G.soft,
+            fontFamily:G.body, whiteSpace:"nowrap",
+            boxShadow:"0 4px 20px rgba(0,0,0,0.5)",
+            position:"relative",
+            animation:"floatTooltip 3s ease-in-out infinite",
+          }}>
+            💬 Ask me anything!
+            {/* arrow */}
+            <div style={{ position:"absolute", bottom:-6, right:22, width:10, height:10, background:"#0c0c18", border:"1px solid rgba(201,168,76,0.3)", borderTop:"none", borderLeft:"none", transform:"rotate(45deg)" }} />
+          </div>
+
+          <button onClick={() => setChatOpen(true)} style={{
+            width:56, height:56, borderRadius:"50%",
+            background:`linear-gradient(135deg, ${G.gold}, #8c6820)`,
+            border:"none", cursor:"pointer", fontSize:"1.4rem",
+            boxShadow:`0 4px 24px rgba(201,168,76,0.4)`,
+            transition:"transform 0.2s, box-shadow 0.2s",
+            display:"flex", alignItems:"center", justifyContent:"center",
+          }}
+            onMouseOver={e => { e.currentTarget.style.transform="scale(1.1)"; e.currentTarget.style.boxShadow="0 6px 36px rgba(201,168,76,0.6)"; }}
+            onMouseOut={e => { e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow="0 4px 24px rgba(201,168,76,0.4)"; }}
+          >🤖</button>
+        </div>
+      )}
+
+      {/* ══════════ CHAT WINDOW ══════════ */}
+      {chatOpen && (
+        <div style={{
+          position:"fixed", bottom:28, right:28, width:348, height:520,
+          background:"#0c0c16", border:`1px solid rgba(201,168,76,0.28)`,
+          borderRadius:3, display:"flex", flexDirection:"column", zIndex:200,
+          boxShadow:"0 28px 64px rgba(0,0,0,0.7)",
+          animation:"slideUp 0.3s cubic-bezier(0.16,1,0.3,1)",
+        }}>
+          {/* Header */}
+          <div style={{ padding:"1rem 1.25rem", background:"rgba(201,168,76,0.08)", borderBottom:`1px solid rgba(201,168,76,0.18)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ width:32, height:32, borderRadius:"50%", background:`linear-gradient(135deg, ${G.gold}, #8c6820)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.9rem" }}>🤖</div>
+              <div>
+                <div style={{ fontFamily:G.display, color:G.gold, fontSize:"0.95rem" }}>AI Assistant</div>
+                <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:1 }}>
+                  <span style={{ width:5, height:5, borderRadius:"50%", background:"#4ade80", display:"inline-block" }} />
+                  <span style={{ fontSize:"0.6rem", color:"#4ade80", letterSpacing:"0.1em", fontFamily:G.body }}>Online · RAG-powered</span>
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setChatOpen(false)} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", padding:4, transition:"color 0.2s" }}
+              onMouseOver={e => e.currentTarget.style.color=G.gold}
+              onMouseOut={e => e.currentTarget.style.color=G.muted}
+            ><X size={17} /></button>
+          </div>
+
+          {/* Messages */}
+          <div style={{ flex:1, overflowY:"auto", padding:"1rem", display:"flex", flexDirection:"column", gap:"0.7rem" }}>
+            {messages.map((msg, i) => (
+              <div key={i} style={{
+                alignSelf:msg.role==="user"?"flex-end":"flex-start",
+                maxWidth:"82%", padding:"9px 14px",
+                background:msg.role==="user"?`linear-gradient(135deg, ${G.gold}, #8c6820)`:"rgba(201,168,76,0.07)",
+                border:msg.role==="user"?"none":`1px solid rgba(201,168,76,0.14)`,
+                color:msg.role==="user"?G.bg:G.soft,
+                fontSize:"0.85rem", lineHeight:1.55, fontFamily:G.body,
+              }}>{msg.content}</div>
+            ))}
+            {loading && (
+              <div style={{ alignSelf:"flex-start", padding:"9px 14px", background:"rgba(201,168,76,0.07)", border:`1px solid rgba(201,168,76,0.14)`, color:G.muted, fontSize:"0.85rem" }}>
+                Thinking…
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input */}
+          <div style={{ padding:"0.75rem", borderTop:`1px solid rgba(201,168,76,0.12)`, display:"flex", gap:"0.5rem" }}>
+            <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==="Enter" && sendMessage()}
+              placeholder="Ask about Vishnu…"
+              style={{ flex:1, background:"rgba(201,168,76,0.05)", border:`1px solid rgba(201,168,76,0.18)`, padding:"8px 12px", color:"#c0b090", fontSize:"0.85rem", outline:"none", fontFamily:G.body, borderRadius:0, transition:"border-color 0.2s" }}
+              onFocus={e => e.target.style.borderColor="rgba(201,168,76,0.5)"}
+              onBlur={e => e.target.style.borderColor="rgba(201,168,76,0.18)"}
+            />
+            <button onClick={sendMessage} style={{ background:`linear-gradient(135deg, ${G.gold}, #8c6820)`, border:"none", padding:"8px 18px", color:G.bg, cursor:"pointer", fontSize:"0.8rem", letterSpacing:"0.06em", fontFamily:G.body, transition:"opacity 0.2s" }}
+              onMouseOver={e => e.currentTarget.style.opacity="0.82"}
+              onMouseOut={e => e.currentTarget.style.opacity="1"}
+            >Send</button>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ GLOBAL STYLES ══════════ */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #07070e; }
+        ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; }
+        ::selection { background: rgba(201,168,76,0.22); color: #c9a84c; }
+        @keyframes heroGlow {
+          0%,100% { box-shadow: 0 0 0 8px rgba(201,168,76,0.04), 0 0 40px rgba(201,168,76,0.10); }
+          50%      { box-shadow: 0 0 0 8px rgba(201,168,76,0.09), 0 0 64px rgba(201,168,76,0.22); }
+        }
+        @keyframes scrollLine {
+          0%,100% { opacity: 0.4; }
+          50%      { opacity: 0.85; }
+        }
+        @keyframes floatTooltip {
+          0%,100% { transform: translateY(0px); }
+          50%      { transform: translateY(-4px); }
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 768px) {
+          nav > div > div:nth-child(2) { display: none; }
+        }
+      `}</style>
     </div>
   );
 }
-
-export default App;
